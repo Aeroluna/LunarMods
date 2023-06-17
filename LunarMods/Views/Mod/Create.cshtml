@@ -1,0 +1,92 @@
+@model LunarMods.Models.ModInput
+
+@{
+    ViewData["Title"] = "Create";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/glyphicons.css"/>
+
+<div class="row">
+    <h3 class="my-4">Creating New Mod</h3>
+
+    <hr />
+    <div class="col">
+        <form asp-action="Create" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Overview" class="control-label"></label>
+                <textarea asp-for="Overview" class="form-control" rows="2" ></textarea>
+                <span asp-validation-for="Overview" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Category" class="control-label"></label>
+                <select asp-for="Category" class="form-control" asp-items="ModInput.CategoryOptions"></select>
+                <span asp-validation-for="Category" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PreviewImage" class="control-label"></label>
+                <input asp-for="PreviewImage" class="form-control" type="file" accept="image/png,image/jpeg" />
+                <span asp-validation-for="PreviewImage" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Repository" class="control-label"></label>
+                <input asp-for="Repository" class="form-control"/>
+                <span asp-validation-for="Repository" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Description" class="control-label"></label>
+                <textarea asp-for="Description" class="form-control" id="descriptionEditor"># Hello world!</textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Visibility" class="control-label"></label>
+                <select asp-for="Visibility" class="form-control" asp-items="ModInput.VisibilityOptions"></select>
+                <span asp-validation-for="Visibility" class="text-danger"></span>
+            </div>
+            <div class="form-group my-4">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="~/lib/ace-builds/src-min/ace.js"></script>
+    <script src="~/lib/bootstrap-markdown-editor/dist/js/bootstrap-markdown-editor.js"></script>
+
+    <script>
+        $('#descriptionEditor').markdownEditor({
+            // Activate the preview:
+            preview: true,
+            // This callback is called when the user click on the preview button:
+            onPreview: function (content, callback) {
+                if (!content) {
+                    callback("");
+                    return;
+                }
+
+                $.ajax({
+                    url: '/api/markdown',
+                    type: 'POST',
+                    dataType: 'html',
+                    data: {content: content},
+                })
+                .done(function(result) {
+                    callback(result);
+                });
+            },
+
+            imageUpload: true,
+            uploadPath: '/api/uploadimage'
+        });
+    </script>
+}

@@ -1,0 +1,66 @@
+﻿@import "_variables.scss";
+
+@import "../lib/bootstrap/dist/scss/functions";
+
+$primary: #363E7A;
+$form-file-button-bg: $secondary;
+$tooltip-color: $light;
+$tooltip-opacity: 1;
+$input-bg: #cccccc;
+$nav-link-color: $white;
+
+@import "../lib/bootstrap/dist/scss/variables";
+@import "../lib/bootstrap/dist/scss/mixins";
+@import "../lib/bootstrap/dist/scss/utilities";
+
+@import "../lib/bootstrap/dist/scss/root";
+@import "../lib/bootstrap/dist/scss/reboot";
+@import "../lib/bootstrap/dist/scss/type";
+@import "../lib/bootstrap/dist/scss/images";
+@import "../lib/bootstrap/dist/scss/containers";
+@import "../lib/bootstrap/dist/scss/grid";
+@import "../lib/bootstrap/dist/scss/tables";
+@import "../lib/bootstrap/dist/scss/forms";
+@import "../lib/bootstrap/dist/scss/buttons";
+@import "../lib/bootstrap/dist/scss/transitions";
+@import "../lib/bootstrap/dist/scss/dropdown";
+@import "../lib/bootstrap/dist/scss/button-group";
+@import "../lib/bootstrap/dist/scss/nav";
+@import "../lib/bootstrap/dist/scss/navbar";
+@import "../lib/bootstrap/dist/scss/card";
+@import "../lib/bootstrap/dist/scss/accordion";
+@import "../lib/bootstrap/dist/scss/breadcrumb";
+@import "../lib/bootstrap/dist/scss/pagination";
+@import "../lib/bootstrap/dist/scss/badge";
+@import "../lib/bootstrap/dist/scss/alert";
+@import "../lib/bootstrap/dist/scss/progress";
+@import "../lib/bootstrap/dist/scss/list-group";
+@import "../lib/bootstrap/dist/scss/close";
+@import "../lib/bootstrap/dist/scss/toasts";
+@import "../lib/bootstrap/dist/scss/modal";
+@import "../lib/bootstrap/dist/scss/tooltip";
+@import "../lib/bootstrap/dist/scss/popover";
+@import "../lib/bootstrap/dist/scss/carousel";
+@import "../lib/bootstrap/dist/scss/spinners";
+@import "../lib/bootstrap/dist/scss/offcanvas";
+@import "../lib/bootstrap/dist/scss/placeholders";
+
+@import "../lib/bootstrap/dist/scss/helpers";
+
+@import "../lib/bootstrap/dist/scss/utilities/api";
+
+@import "_bootswatch.scss";
+
+.navbar-brand {
+  color: $white,
+}
+
+.md-toolbar {
+  background: $secondary;
+  border: 0;
+}
+
+.ace-tomorrow {
+  color: $black;
+  background: $input-bg;
+}

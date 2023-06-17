@@ -1,0 +1,19 @@
+﻿@using System.Net
+@model System.Net.HttpStatusCode
+@inject IWebHostEnvironment Env
+
+@{
+    HttpStatusCode status = Model;
+    string name = Microsoft.AspNetCore.WebUtilities.ReasonPhrases.GetReasonPhrase((int)status);
+    ViewData["Title"] = $"{(int)status} {name}";;
+    string dataFile = Env.ContentRootPath + "/wwwroot/resource/status-quotes";
+    string[] lines = await File.ReadAllLinesAsync(dataFile);
+    Random r = new();
+    int randomLineNumber = r.Next(0, lines.Length - 1);
+    string splash = lines[randomLineNumber].Replace("@err", ((int)status).ToString());
+}
+
+<div class="text-center">
+    <h1 class="display-4 text-danger">@ViewData["Title"]</h1>
+    <h6 class="text-light">@splash</h6>
+</div>

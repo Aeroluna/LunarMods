@@ -1,0 +1,54 @@
+@model LunarMods.Models.FileVersionInput
+
+@{
+    FileVersionInput ver = ViewData.Model ?? throw new InvalidOperationException();
+    ViewData["Title"] = "Edit Version";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <h3 class="my-4">Editing v@(ver.Version)</h3>
+
+    <hr />
+    <div class="col">
+        <form asp-action="Edit" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="Mod" />
+            <input type="hidden" asp-for="ModName" />
+            <input type="hidden" asp-for="Version" />
+            <div class="form-group">
+                <label asp-for="Alpha" class="control-label"></label>
+                <select asp-for="Alpha" class="form-control" asp-items="FileVersionInput.AlphaOptions"></select>
+                <span asp-validation-for="Alpha" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Changelog" class="control-label"></label>
+                <textarea asp-for="Changelog" class="form-control" rows="2" ></textarea>
+                <span asp-validation-for="Changelog" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Dependencies" class="control-label"></label>
+                <input asp-for="Dependencies" class="form-control" />
+                <span asp-validation-for="Dependencies" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Conflicts" class="control-label"></label>
+                <input asp-for="Conflicts" class="form-control" />
+                <span asp-validation-for="Conflicts" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="GameVersions" class="control-label"></label>
+                <input asp-for="GameVersions" class="form-control" />
+                <span asp-validation-for="GameVersions" class="text-danger"></span>
+            </div>
+            <div class="form-group my-4">
+                <input type="submit" value="Save" class="btn btn-primary" />
+                <a class="btn btn-secondary" href="@Url.Action("Index", "FileVersion", new { id = ver.Mod })">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

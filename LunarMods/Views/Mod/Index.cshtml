@@ -1,0 +1,56 @@
+﻿@model IEnumerable<LunarMods.Models.ModDetails>
+
+@{
+    IEnumerable<ModDetails> mods = ViewData.Model ?? throw new InvalidOperationException();
+    ViewData["Title"] = "Mods";
+}
+<h1 class="my-3">Directory</h1>
+@foreach (ModDetails item in mods)
+{
+    <div class="col-4">
+        <div class="card mb-3">
+            <img class="card-img-top" src="/content/@item.Name/@item.PreviewImage" alt=""/>
+            <div class="card-body">
+                <div class="row">
+                    <h5 class="col-md-auto card-title my-0 pe-0 fw-bold">@item.Name</h5>
+                    <h6 class="col-md-auto card-subtitle text-muted align-self-end">by @item.AuthorName</h6>
+                </div>
+                <p class="card-text text-light mb-1" style="font-size:14px">@item.Category</p>
+                <p class="card-text">@item.Overview</p>
+                <div class="row mx-0">
+                    <a class="col-md-auto btn btn-primary stretched-link" href="/mod/@item.Id" value="View" >View</a>
+                    <div class="col"></div>
+                    @switch (item.LatestVersion?.Status ?? -1)
+                    {
+                        default:
+                            <span class="col-md-auto align-self-end badge bg-secondary">Unavailable</span>
+                            break;
+
+                        case 0:
+                            <span class="col-md-auto align-self-end badge bg-danger">Unapproved</span>
+                            break;
+
+                        case 1:
+                            <span class="col-md-auto align-self-end badge bg-info">Trusted</span>
+                            break;
+
+                        case 2:
+                            <span class="col-md-auto align-self-end badge bg-success">Approved</span>
+                            break;
+                    }
+                    @{
+                        switch (item.Visibility)
+                        {
+                            case 2: // unlisted
+                                <span class="col-md-auto align-self-end badge bg-light ms-1">Unlisted</span>
+                                break;
+                            case 3: // private
+                                <span class="col-md-auto align-self-end badge bg-warning ms-1">Private</span>
+                                break;
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

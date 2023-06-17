@@ -1,0 +1,123 @@
+﻿@model LunarMods.Models.AllFileVersionDetails
+
+@{
+    AllFileVersionDetails allVersionDetails = ViewData.Model ?? throw new InvalidOperationException();
+    ModDetails mod = allVersionDetails.Mod;
+    IEnumerable<FileVersionDetails> versions = allVersionDetails.Versions;
+    ViewData["Title"] = mod.Name;
+    Layout = "../Mod/_ModLayout.cshtml";
+}
+
+<link rel="stylesheet" href="~/css/glyphicons.css"/>
+
+<a class="btn btn-outline-light mb-3" href="@Url.Action("Details", "Mod", new { id = mod.Id })">Return to Description</a>
+@foreach (FileVersionDetails version in versions)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row justify-content-between">
+                <div class="col-md-auto mb-2">
+                    <div class="row mx-0">
+                        <h3 class="col-md-auto card-title fw-bold ps-0 mb-0">v@(version.Version)</h3>
+                        @if ((Alpha)version.Alpha == Alpha.PreRelease)
+                        {
+                            <span class="col-md-auto align-self-end badge bg-warning mb-1">Pre-Release</span>
+                        }
+                        @if (mod.LatestVersion?.Version == version.Version)
+                        {
+                            <span class="col-md-auto align-self-end badge bg-success mb-1">Latest</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    @if (mod.CanModerate)
+                    {
+                        <input type="button" value="Delete" class="btn btn-outline-danger mx-1" data-bs-toggle="modal" data-bs-target="#deleteVersionModal" data-bs-name="v@(version.Version)" data-bs-id="@version.Id"/>
+                        <a class="btn btn-outline-warning mx-1" href="@Url.Action("Edit", "FileVersion", new {modId = mod.Id, id = version.Id})">Edit</a>
+                    }
+                    <a class="btn btn-success mx-1" href="/content/@mod.Name/@version.File" download="@version.FileDownloadName">Download</a>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(@version.Changelog))
+            {
+                <p class="col-md-auto card-text fw-light">@version.Changelog</p>
+            }
+            <hr class="mx-0"/>
+            <p class="card-text col-md-auto mb-0 fw-light text-light">Compatible with: @version.GameVersions</p>
+            <div class="row">
+                @if (version.Dependencies.Any())
+                {
+                    <p class="card-text col-md-auto mb-0 fw-light text-light">Depends on:
+                        @foreach (FileVersionDetails.Dependency dependency in version.Dependencies)
+                        {
+                            <a href="@Url.Action("Details", "Mod", new {id = dependency.Id})">@dependency.Name</a>
+                        }
+                    </p>
+                }
+                @if (version.Conflicts.Any())
+                {
+                    <p class="card-text col-md-auto mb-0 fw-light text-light">Conflicts with:
+                        @foreach (FileVersionDetails.Dependency conflict in version.Conflicts)
+                        {
+                            <a href="@Url.Action("Details", "Mod", new {id = conflict.Id})">@conflict.Name</a>
+                        }
+                    </p>
+                }
+            </div>
+            <div class="row">
+                <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-calendar"></span> @version.UploadDate</p>
+                <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-hdd"></span> @version.FileSize</p>
+            </div>
+            <div class="row">
+                <p class="card-text col-md-auto fw-light text-light my-0">SHA256:</p>
+                <p class="text-bg-secondary col-md-auto px-1 fw-light text-light my-0">@version.SHA256</p>
+            </div>
+
+        </div>
+    </div>
+}
+
+<div class="modal fade" id="deleteVersionModal" tabindex="-1" aria-labelledby="deleteVersionModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="deleteVersionModalTitle">Are you sure?</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" id="deleteVersionConfirm">Delete it!</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // idk how else to do this
+    let id;
+
+    const deleteVersionModal = document.getElementById('deleteVersionModal');
+    deleteVersionModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const name = button.getAttribute('data-bs-name');
+        id = button.getAttribute('data-bs-id');
+        const modalTitle = deleteVersionModal.querySelector('.modal-body');
+        modalTitle.textContent = name + ' will be permanently deleted, are you sure you want to delete it?'
+    })
+
+    const deleteVersionButton = document.getElementById("deleteVersionConfirm");
+    deleteVersionButton.addEventListener('click', async _ => {
+        $.ajax({
+            url: '/mod/@mod.Id/files/' + id + '/delete',
+            type: 'POST',
+            success: function (_) {
+                window.location.href = "/mod/@mod.Id"
+            },
+            error:function(err) {
+                console.error(`Error ${err}`)
+            }
+        });
+    });
+</script>

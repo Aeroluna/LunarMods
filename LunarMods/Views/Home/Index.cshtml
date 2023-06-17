@@ -1,0 +1,19 @@
+﻿@inject IWebHostEnvironment Env
+
+@{
+    ViewData["Title"] = "Home";
+}
+
+@{
+    string dataFile = Env.ContentRootPath + "/wwwroot/resource/luna-quotes";
+    string[] lines = await File.ReadAllLinesAsync(dataFile);
+    Random r = new();
+    int randomLineNumber = r.Next(0, lines.Length - 1);
+    string splash = lines[randomLineNumber];
+}
+
+<div class="text-center">
+    <h1 class="display-4 mb-0">Welcome to Lunar Mods</h1>
+    <h6 class="text-light">By <a href="https://github.com/Aeroluna">Aeroluna</a></h6>
+    <h4>@splash</h4>
+</div>

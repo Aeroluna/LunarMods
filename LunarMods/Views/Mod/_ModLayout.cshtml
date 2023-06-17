@@ -1,0 +1,144 @@
+﻿@model LunarMods.Models.AllFileVersionDetails
+
+@{
+    AllFileVersionDetails allVersionDetails = ViewData.Model ?? throw new InvalidOperationException();
+    ModDetails mod = allVersionDetails.Mod;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <h1 class="col-md-auto mb-3">@mod.Name</h1>
+    @{
+        switch (@mod.Visibility)
+        {
+            case 2: // unlisted
+                <span class="col-md-auto align-self-end badge bg-warning mb-4">Unlisted</span>
+                break;
+            case 3: // private
+                <span class="col-md-auto align-self-end badge bg-danger mb-4">Private</span>
+                break;
+        }
+    }
+</div>
+<h5 class="text-light">By @mod.AuthorName</h5>
+<hr/>
+<dl class="row">
+    <dt class="col-sm-9 my-3">
+        @RenderBody()
+        @await RenderSectionAsync("Scripts", required: false)
+    </dt>
+    <dt class="col-sm-3 my-3">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="card-title my-1">@mod.Overview</p>
+                <hr/>
+                <dl class="row mb-1 justify-content-between">
+                    <dt class="col-md-auto">Category:</dt>
+                    <dt class="col-md-auto text-light">@mod.Category</dt>
+                </dl>
+                <dl class="row mb-1 justify-content-between">
+                    <dt class="col-md-auto">Created:</dt>
+                    <dt class="col-md-auto text-light">@mod.CreatedDate</dt>
+                </dl>
+                <dl class="row mb-1 justify-content-between">
+                    <dt class="col-md-auto">Last Updated:</dt>
+                    <dt class="col-md-auto text-light">@mod.LastUpdateDate</dt>
+                </dl>
+                <dl class="row mb-1 justify-content-between">
+                    <dt class="col-md-auto">Latest Version:</dt>
+                    @if (mod.LatestVersion != null)
+                    {
+                        <dt class="col-md-auto text-light">v@(mod.LatestVersion.Version)</dt>
+                    }
+                    else
+                    {
+                        <dt class="col-md-auto text-light">N/A</dt>
+                    }
+                </dl>
+                <dl class="row mb-1 justify-content-between">
+                    <dt class="col-md-auto">Status:</dt>
+                    @switch (mod.LatestVersion?.Status ?? -1)
+                    {
+                        default:
+                            <dt class="col-md-auto text-light text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="No Release versions of this mod are currently available.">Unavailable</dt>
+                            break;
+
+                        case 0:
+                            <dt class="col-md-auto text-danger text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has not been manually approved.">Unapproved</dt>
+                            break;
+
+                        case 1:
+                            <dt class="col-md-auto text-info text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has not been manually approved but comes from a trusted developer.">Trusted</dt>
+                            break;
+
+                        case 2:
+                            <dt class="col-md-auto text-success text-decoration-underline" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has been manually approved.">Approved</dt>
+                            break;
+                    }
+                </dl>
+                <a class="card-text" href="@Url.Action("Index", "FileVersion", new {id = mod.Id})">All Files</a>
+                <div></div>
+                @if (!string.IsNullOrEmpty(mod.Repository))
+                {
+                    <a class="card-text" href="@mod.Repository">Repository</a>
+                }
+            </div>
+        </div>
+
+        <div class="d-grid gap-2">
+            @if (mod.LatestVersion != null)
+            {
+                <a class="btn btn-success" href="/content/@mod.Name/@mod.LatestVersion.File" download="@mod.LatestVersion.FileDownloadName">Download</a>
+            }
+            @if (mod.CanUpload)
+            {
+                <a class="btn btn-outline-info" href="@Url.Action("Upload", "FileVersion", new {id = mod.Id})">Upload</a>
+            }
+            @if (mod.CanModerate)
+            {
+                <a class="btn btn-outline-warning" href="@Url.Action("Edit", "Mod", new {id = mod.Id})">Edit</a>
+                <input type="button" value="Delete" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"/>
+            }
+        </div>
+    </dt>
+</dl>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="deleteModalLabel">Are you sure?</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        @mod.Name will be permanently deleted, are you sure you want to delete it?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-danger" id="deleteConfirm">Delete it!</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+    const button = document.getElementById("deleteConfirm");
+    button.addEventListener('click', async _ => {
+        $.ajax({
+            url: '/mod/@mod.Id/delete',
+            type: 'POST',
+            success: function (_) {
+                window.location.href = "/mod"
+            },
+            error:function(err) {
+                console.error(`Error ${err}`)
+            }
+        });
+    });
+
+    $(document).ready(function() {
+        $("body").tooltip({ selector: '[data-bs-toggle=tooltip]', container: 'body' });
+    });
+</script>
+}
