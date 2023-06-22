@@ -6,11 +6,13 @@ namespace LunarMods.Utilities;
 
 public static class StringUtil
 {
-    public static string TrimInvalid(this string strIn)
+    public static string TrimInvalid(this string str)
     {
         // Replace invalid characters with empty strings.
         try {
-            return Regex.Replace(strIn, @"[^\w\.@-]", "",
+            str = Regex.Replace(str, @"[^\w\.@-]", "",
+                RegexOptions.None, TimeSpan.FromSeconds(1.5));
+            return Regex.Replace(str, @"\s", "-",
                 RegexOptions.None, TimeSpan.FromSeconds(1.5));
         }
         // If we timeout when replacing invalid characters,
@@ -20,25 +22,9 @@ public static class StringUtil
         }
     }
 
-    public static string SwapWhitespace(this string str)
-    {
-        try {
-            return Regex.Replace(str, @"\s", "-",
-                RegexOptions.None, TimeSpan.FromSeconds(1.5));
-        }
-        catch (RegexMatchTimeoutException) {
-            return string.Empty;
-        }
-    }
-
     public static string AppendId(this string str)
     {
         return str + "_" + DateTime.UtcNow.ToString("yyyy-MM-ddTHHmmss") + "_" + Guid.NewGuid().ToString()[..7];
-    }
-
-    public static string Transform(this string str, string? ext = null)
-    {
-        return str.SwapWhitespace().TrimInvalid().AppendId() + ext;
     }
 
     public static string JsonString(this string str)
@@ -78,6 +64,6 @@ public static class StringUtil
 
     public static IEnumerable<string> SSplit(this string str)
     {
-        return str.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return str.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Select(n => n.Trim());
     }
 }

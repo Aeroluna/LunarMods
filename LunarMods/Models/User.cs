@@ -2,7 +2,7 @@
 
 public class User
 {
-    public ulong Id { get; set; }
+    public ulong Id { get; init; }
 
     public string Username { get; set; } = string.Empty;
 

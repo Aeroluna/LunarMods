@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using AspNet.Security.OAuth.Discord;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,13 +6,6 @@ namespace LunarMods.Controllers;
 
 public class AuthController : Controller
 {
-    private readonly IConfiguration _config;
-
-    public AuthController(IConfiguration config)
-    {
-        _config = config;
-    }
-
     private string PreviousOrHome()
     {
         string result = Request.Headers["Referer"].ToString();

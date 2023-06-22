@@ -1,7 +1,9 @@
-﻿using System.Net;
+﻿using System.IO.Compression;
+using System.Net;
 using System.Security.Cryptography;
 using LunarMods.Data;
 using LunarMods.Models;
+using LunarMods.Services;
 using LunarMods.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,38 +15,18 @@ public class FileVersionController: Controller
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _hostEnvironment;
+    private readonly GameVersionService _gameVersionService;
 
-    public FileVersionController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment)
+    public FileVersionController(ApplicationDbContext context, IWebHostEnvironment hostEnvironment, GameVersionService gameVersionService)
     {
         _context = context;
         _hostEnvironment = hostEnvironment;
+        _gameVersionService = gameVersionService;
     }
 
     public void CompareLatestVersion(FileVersion fileVersion, Mod mod)
     {
-        if ((Alpha)fileVersion.Alpha != Alpha.Release)
-        {
-            return;
-        }
-
-        if (mod.LatestVersion == null)
-        {
-            mod.LatestVersion = fileVersion.Id;
-            mod.LastUpdateDate = StringUtil.NowDate();
-            return;
-        }
-
-        FileVersion? currentLatest = _context.FileVersions.Find(mod.LatestVersion);
-        if (currentLatest == null)
-        {
-            mod.LatestVersion = fileVersion.Id;
-            mod.LastUpdateDate = StringUtil.NowDate();
-            return;
-        }
-
-        Version currentVersion = Version.Parse(currentLatest.Version);
-        Version newVersion = Version.Parse(fileVersion.Version);
-        if (newVersion.CompareTo(currentVersion) <= 0)
+        if (!_context.CompareLatestVersion(fileVersion, mod))
         {
             return;
         }
@@ -55,20 +37,7 @@ public class FileVersionController: Controller
 
     public void UpdateLatestVersion(FileVersion fileVersion, Mod mod)
     {
-        FileVersion? maxVersion = null;
-        Version? versionMaxValue = null;
-        foreach (FileVersion version in _context.FileVersions
-                     .Where(n => n.Mod == mod.Id && (Alpha)n.Alpha == Alpha.Release && (Visibility)n.Visibility != Visibility.Deleted && n.Id != fileVersion.Id))
-        {
-            Version newVer = Version.Parse(version.Version);
-            if (newVer.CompareTo(versionMaxValue) <= 0)
-            {
-                continue;
-            }
-
-            maxVersion = version;
-            versionMaxValue = newVer;
-        }
+        FileVersion? maxVersion = ApplicationDbContext.GetLatestVersion(_context.GetModVersions(mod).Where(n => n != fileVersion));
 
         if (maxVersion == null)
         {
@@ -87,7 +56,7 @@ public class FileVersionController: Controller
         }
 
         List<string> result = new();
-        foreach (string dependencyName in dependencies.SSplit().Select(n => n.Trim()))
+        foreach (string dependencyName in dependencies.SSplit())
         {
             Mod? dependency = await _context.Mods.FirstOrDefaultAsync(n => n.Name == dependencyName);
             if (dependency == null || (Visibility)dependency.Visibility is Visibility.Deleted or Visibility.Private)
@@ -113,7 +82,7 @@ public class FileVersionController: Controller
 
         List<FileVersionDetails> fileVersions = (await _context.FileVersions.ToListAsync())
             .Where(n => (Visibility)n.Visibility != Visibility.Deleted && n.Mod == id)
-            .Select(n => _context.Convert(mod, n))
+            .Select(n => _context.Convert(n))
             .OrderByDescending(n => Version.Parse(n.Version))
             .ToList();
 
@@ -163,12 +132,22 @@ public class FileVersionController: Controller
             return View("StatusCode", HttpStatusCode.Forbidden);
         }
 
+        if (!_gameVersionService.ValidateGameVersions(input))
+        {
+            ModelState.AddModelError(nameof(FileVersionInput.GameVersions), $"{input.GameVersions} is invalid.");
+        }
+
         if (input.File == null)
         {
             ModelState.AddModelError(nameof(FileVersionInput.File), $"{nameof(input.File)} required.");
         }
 
-        string version = Version.Parse(input.Version).ToString();
+        if (!Version.TryParse(input.Version, out Version? versionVersion))
+        {
+            ModelState.AddModelError(nameof(FileVersionInput.Version), $"{versionVersion} is not a valid version.");
+        }
+
+        string version = versionVersion?.ToString() ?? string.Empty;
         if (await _context.FileVersions.AnyAsync(n => n.Version == version))
         {
             ModelState.AddModelError(nameof(FileVersionInput.Version), $"Version {version} already exists.");
@@ -177,19 +156,38 @@ public class FileVersionController: Controller
         string dependencies = await ValidateDependencies(input.Dependencies);
         string conflicts = await ValidateDependencies(input.Conflicts);
 
-        if (!ModelState.IsValid) return View(input);
+        if (!ModelState.IsValid)
+        {
+            return View(input);
+        }
 
-        SHA256 sha256 = SHA256.Create();
         string wwwRootPath = _hostEnvironment.WebRootPath;
-        string directory = wwwRootPath + $"\\content\\{mod.Name}";
-        string fileName = version.AppendId() + ".zip";
+        string directory = wwwRootPath.JsonString() + $"/content/{mod.Name.TrimInvalid()}";
+        string fileName = mod.Name.TrimInvalid() + "_v" + version + ".zip";
         Directory.CreateDirectory(directory);
-        await using FileStream write = System.IO.File.OpenWrite(directory + @"\" + fileName);
+
+        List<string> entries = new();
         await using Stream read = input.File!.OpenReadStream();
-        await read.CopyToAsync(write);
-        read.Position = 0;
-        string hash = BitConverter.ToString(await sha256.ComputeHashAsync(read)).Replace("-", string.Empty).ToLowerInvariant();
-        long size = read.Length;
+        await using MemoryStream zipStream = new();
+        await read.CopyToAsync(zipStream);
+        using (ZipArchive zip = new(zipStream, ZipArchiveMode.Update, true))
+        {
+            entries.AddRange(zip.Entries.Select(zipArchiveEntry => zipArchiveEntry.ToString()));
+        }
+
+        // read metadata
+        zipStream.Position = 0;
+        long size = zipStream.Length;
+        MD5 md5 = MD5.Create();
+        SHA256 sha256 = SHA256.Create();
+        string md5Hash = BitConverter.ToString(await md5.ComputeHashAsync(zipStream)).Replace("-", string.Empty).ToLowerInvariant();
+        zipStream.Position = 0;
+        string sha256Hash = BitConverter.ToString(await sha256.ComputeHashAsync(zipStream)).Replace("-", string.Empty).ToLowerInvariant();
+        zipStream.Position = 0;
+        await using (FileStream write = System.IO.File.OpenWrite(directory + @"/" + fileName))
+        {
+            await zipStream.CopyToAsync(write);
+        }
 
         string id = Guid.NewGuid().ToString("N")[..8];
         FileVersion fileVersion = new()
@@ -204,9 +202,11 @@ public class FileVersionController: Controller
             UploadDate = StringUtil.NowDate(),
             Changelog = input.Changelog ?? string.Empty,
             GameVersions = input.GameVersions,
-            File = fileName,
+            FileName = fileName,
             FileSize = size,
-            SHA256 = hash
+            MD5 = md5Hash,
+            SHA256 = sha256Hash,
+            Files = string.Join('\n', entries)
         };
 
         _context.FileVersions.Add(fileVersion);
@@ -230,7 +230,7 @@ public class FileVersionController: Controller
         async Task<string> ReverseDependencies(string dependencies)
         {
             List<string> result = new();
-            foreach (string dependencyId in dependencies.SSplit().Select(n => n.Trim()))
+            foreach (string dependencyId in dependencies.SSplit())
             {
                 Mod? dependency = await _context.GetMod(dependencyId);
                 if (dependency == null)
@@ -270,10 +270,18 @@ public class FileVersionController: Controller
             return View("StatusCode", HttpStatusCode.NotFound);
         }
 
+        if (!_gameVersionService.ValidateGameVersions(input))
+        {
+            ModelState.AddModelError(nameof(FileVersionInput.GameVersions), $"{input.GameVersions} is invalid.");
+        }
+
         string dependencies = await ValidateDependencies(input.Dependencies);
         string conflicts = await ValidateDependencies(input.Conflicts);
 
-        if (!ModelState.IsValid) return View(input);
+        if (!ModelState.IsValid)
+        {
+            return View(input);
+        }
 
         version.Alpha = input.Alpha;
         version.Dependencies = dependencies;
@@ -318,6 +326,24 @@ public class FileVersionController: Controller
         fileVersion.Visibility = (int)Visibility.Deleted;
         UpdateLatestVersion(fileVersion, mod);
         await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(ModController.Details), "Mod", new {id = mod.Id});
+        return RedirectToAction(nameof(Index), "FileVersion", new {id = mod.Id});
+    }
+
+    [HttpPost]
+    [Route("mod/{modId:length(8)}/files/{id:length(8)}/approve")]
+    [Authorize(Roles = "approver")]
+    public async Task<IActionResult> Approve(string modId, string id)
+    {
+        Mod? mod = await _context.GetMod(modId);
+        FileVersion? fileVersion = await _context.FileVersions.FindAsync(id);
+        if (mod == null || fileVersion == null)
+        {
+            return View("StatusCode", HttpStatusCode.NotFound);
+        }
+
+        fileVersion.Status = (int)Status.Approved;
+        CompareLatestVersion(fileVersion, mod);
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index), "FileVersion", new {id = mod.Id});
     }
 }

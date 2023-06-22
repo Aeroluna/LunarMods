@@ -28,7 +28,7 @@ public class ModController : Controller
         }
 
         string wwwRootPath = _hostEnvironment.WebRootPath;
-        string directory = wwwRootPath + $"\\content\\{name}";
+        string directory = wwwRootPath + $"/content/{name.TrimInvalid()}";
         string fileName = "preview_image".AppendId() + ".jpg";
         using Image image = await Image.LoadAsync(file.OpenReadStream());
         ResizeOptions options = new()
@@ -39,7 +39,7 @@ public class ModController : Controller
         };
         image.Mutate(x => x.Resize(options));
         Directory.CreateDirectory(directory);
-        await image.SaveAsJpegAsync(directory + @"\" + fileName);
+        await image.SaveAsJpegAsync(directory + @"/" + fileName);
         return fileName;
     }
 
@@ -123,7 +123,7 @@ public class ModController : Controller
             Overview = mod.Overview,
             Category = mod.Category,
             Description = mod.Description,
-            Repository = mod.Repository,
+            Repository = mod.Repository
         };
 
         return View(modInput);
@@ -205,7 +205,7 @@ public class ModController : Controller
 
         return View(new AllFileVersionDetails
         {
-            Mod = await _context.Convert(User, mod),
+            Mod = await _context.Convert(User, mod)
         });
     }
 }

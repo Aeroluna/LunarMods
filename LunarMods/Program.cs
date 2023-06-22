@@ -1,24 +1,18 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using AspNet.Security.OAuth.Discord;
-using IdentityModel.AspNetCore.AccessTokenValidation;
 using LunarMods.Data;
 using LunarMods.Models;
+using LunarMods.Services;
 using LunarMods.Utilities;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 ConfigurationManager config = builder.Configuration;
-
 
 /*builder.Services.AddHttpLogging(options =>
 {
@@ -31,7 +25,7 @@ ConfigurationManager config = builder.Configuration;
 
 // Add services to the container.
 builder.Services.AddDbContextPool<ApplicationDbContext>(options => options
-    .UseMySql(config.GetConnectionString("MariaDb"), ServerVersion.Parse("10.11.2-MariaDB")));
+    .UseMySql(config.GetValue<string>("Database:ConnectionString"), ServerVersion.Parse(config.GetValue<string>("Database:Version"))));
 
 builder.Services.AddControllersWithViews(options =>
 {
@@ -40,9 +34,6 @@ builder.Services.AddControllersWithViews(options =>
 });
 
 const string accessDeniedPath = "/auth/unauthorized/";
-
-JwtSettings jwtSettings = new();
-config.Bind("Jwt", jwtSettings);
 
 builder.Services.AddAuthentication(options =>
     {
@@ -107,6 +98,7 @@ builder.Services.AddAuthentication(options =>
                 context.RunClaimActions(userJson.RootElement);
 
                 ulong id = ulong.Parse(userJson.RootElement.GetProperty("id").GetString() ?? throw new InvalidOperationException("No [id] found."));
+                string username = userJson.RootElement.GetProperty("username").GetString() ?? throw new InvalidOperationException("No [username] found.");
                 ApplicationDbContext db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
                 User? user = await db.Users.FirstOrDefaultAsync(n => n.Id == id);
                 if (user == null)
@@ -114,9 +106,14 @@ builder.Services.AddAuthentication(options =>
                     user = new User
                     {
                         Id = id,
-                        Username = userJson.RootElement.GetProperty("username").GetString() ?? throw new InvalidOperationException("No [username] found.")
+                        Username = username
                     };
                     db.Add(user);
+                    await db.SaveChangesAsync();
+                }
+                else if (user.Username != username)
+                {
+                    user.Username = username;
                     await db.SaveChangesAsync();
                 }
 
@@ -131,6 +128,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
+builder.Services.AddScoped<GameVersionService, GameVersionService>();
+
 WebApplication app = builder.Build();
 
 ////app.UseHttpLogging();
@@ -140,10 +139,10 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/error");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    ////app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+////app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -154,5 +153,14 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+using (IServiceScope scope = app.Services.CreateScope())
+{
+    ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
+}
 
 app.Run();

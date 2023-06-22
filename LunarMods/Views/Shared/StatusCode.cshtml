@@ -5,7 +5,7 @@
 @{
     HttpStatusCode status = Model;
     string name = Microsoft.AspNetCore.WebUtilities.ReasonPhrases.GetReasonPhrase((int)status);
-    ViewData["Title"] = $"{(int)status} {name}";;
+    ViewData["Title"] = $"{(int)status} {name}";
     string dataFile = Env.ContentRootPath + "/wwwroot/resource/status-quotes";
     string[] lines = await File.ReadAllLinesAsync(dataFile);
     Random r = new();

@@ -1,0 +1,44 @@
+﻿@model LunarMods.Models.AdminInput
+
+@{
+    ViewData["Title"] = "Admin";
+}
+
+<div class="row">
+    <div class="col">
+        @if (ViewData.Model?.ReturnMessage != null)
+        {
+            <h3 class="text-info">@ViewData.Model.ReturnMessage</h3>
+        }
+        <form enctype="multipart/form-data" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="NewGameVersion" class="control-label"></label>
+                <input asp-for="NewGameVersion" class="form-control"/>
+                <span asp-validation-for="NewGameVersion" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="NewGameVersionAlpha" class="control-label"></label>
+                <input asp-for="NewGameVersionAlpha" class="form-control"/>
+                <span asp-validation-for="NewGameVersionAlpha" class="text-danger"></span>
+            </div>
+            <div class="form-group my-4">
+                <input type="submit" value="Submit" class="btn btn-primary" asp-action="SubmitGameVersion"/>
+                <input type="submit" value="Refresh" class="btn btn-primary" asp-action="RefreshGameVersion"/>
+            </div>
+            <div class="form-group">
+                <label asp-for="TargetUser" class="control-label"></label>
+                <input asp-for="TargetUser" class="form-control"/>
+                <span asp-validation-for="TargetUser" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="SetRoles" class="control-label"></label>
+                <input asp-for="SetRoles" class="form-control"/>
+                <span asp-validation-for="SetRoles" class="text-danger"></span>
+            </div>
+            <div class="form-group my-4">
+                <input type="submit" value="Set Roles" class="btn btn-primary" asp-action="SetUserRoles"/>
+            </div>
+        </form>
+    </div>
+</div>

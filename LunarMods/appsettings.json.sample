@@ -1,6 +1,7 @@
 {
-  "ConnectionStrings": {
-    "MariaDb": ""
+  "Database": {
+    "ConnectionString": "",
+    "Version": ""
   },
   "Logging": {
     "LogLevel": {

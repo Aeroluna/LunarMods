@@ -1,4 +1,7 @@
-﻿@model IEnumerable<LunarMods.Models.ModDetails>
+﻿@using LunarMods.Services
+@using LunarMods.Utilities
+@model IEnumerable<LunarMods.Models.ModDetails>
+@inject GameVersionService GameVersionService
 
 @{
     IEnumerable<ModDetails> mods = ViewData.Model ?? throw new InvalidOperationException();
@@ -9,7 +12,7 @@
 {
     <div class="col-4">
         <div class="card mb-3">
-            <img class="card-img-top" src="/content/@item.Name/@item.PreviewImage" alt=""/>
+            <img class="card-img-top" src="/content/@item.Name.TrimInvalid()/@item.PreviewImage" alt=""/>
             <div class="card-body">
                 <div class="row">
                     <h5 class="col-md-auto card-title my-0 pe-0 fw-bold">@item.Name</h5>
@@ -20,22 +23,26 @@
                 <div class="row mx-0">
                     <a class="col-md-auto btn btn-primary stretched-link" href="/mod/@item.Id" value="View" >View</a>
                     <div class="col"></div>
-                    @switch (item.LatestVersion?.Status ?? -1)
+                    @if (item.LatestVersion != null && !GameVersionService.ContainsLatestVersion(item.LatestVersion.GameVersions))
+                    {
+                        <span class="col-md-auto align-self-end badge bg-warning ms-1">Outdated</span>
+                    }
+                    @switch ((Status)(item.LatestVersion?.Status ?? -1))
                     {
                         default:
-                            <span class="col-md-auto align-self-end badge bg-secondary">Unavailable</span>
+                            <span class="col-md-auto align-self-end badge bg-secondary ms-1">Unavailable</span>
                             break;
 
-                        case 0:
-                            <span class="col-md-auto align-self-end badge bg-danger">Unapproved</span>
+                        case Status.Unapproved:
+                            <span class="col-md-auto align-self-end badge bg-danger ms-1">Unapproved</span>
                             break;
 
-                        case 1:
-                            <span class="col-md-auto align-self-end badge bg-info">Trusted</span>
+                        case Status.Trusted:
+                            <span class="col-md-auto align-self-end badge bg-info ms-1">Trusted</span>
                             break;
 
-                        case 2:
-                            <span class="col-md-auto align-self-end badge bg-success">Approved</span>
+                        case Status.Approved:
+                            <span class="col-md-auto align-self-end badge bg-success ms-1">Approved</span>
                             break;
                     }
                     @{

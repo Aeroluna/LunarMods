@@ -1,4 +1,5 @@
-﻿@model LunarMods.Models.AllFileVersionDetails
+﻿@using LunarMods.Utilities
+@model LunarMods.Models.AllFileVersionDetails
 
 @{
     AllFileVersionDetails allVersionDetails = ViewData.Model ?? throw new InvalidOperationException();
@@ -35,10 +36,14 @@
                         <input type="button" value="Delete" class="btn btn-outline-danger mx-1" data-bs-toggle="modal" data-bs-target="#deleteVersionModal" data-bs-name="v@(version.Version)" data-bs-id="@version.Id"/>
                         <a class="btn btn-outline-warning mx-1" href="@Url.Action("Edit", "FileVersion", new {modId = mod.Id, id = version.Id})">Edit</a>
                     }
-                    <a class="btn btn-success mx-1" href="/content/@mod.Name/@version.File" download="@version.FileDownloadName">Download</a>
+                    @if (User.IsInRole("approver") && (Status)version.Status != Status.Approved)
+                    {
+                        <input type="button" value="Approve" class="btn btn-outline-info mx-1" id="approveButton" data-bs-id="@version.Id"/>
+                    }
+                    <a class="btn btn-success mx-1" href="/content/@mod.Name.TrimInvalid()/@version.FileName" download>Download</a>
                 </div>
             </div>
-            @if (!string.IsNullOrEmpty(@version.Changelog))
+            @if (!string.IsNullOrEmpty(version.Changelog))
             {
                 <p class="col-md-auto card-text fw-light">@version.Changelog</p>
             }
@@ -65,17 +70,47 @@
                 }
             </div>
             <div class="row">
+                @switch (version.Status)
+                {
+                    default:
+                        <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-remove"></span><span class="text-opacity-75 text-danger text-decoration-underline ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has not been manually approved.">Unapproved</span></p>
+                        break;
+
+                    case 1:
+                        <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-ok"></span><span class="text-opacity-75 text-info text-decoration-underline ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has not been manually approved but comes from a trusted developer.">Trusted</span></p>
+                        break;
+
+                    case 2:
+                        <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-ok"></span><span class="text-opacity-75 text-success text-decoration-underline ms-1" data-bs-toggle="tooltip" data-bs-placement="top" title="This version has been manually approved.">Approved</span></p>
+                        break;
+                }
                 <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-calendar"></span> @version.UploadDate</p>
                 <p class="card-text col-md-auto my-0 fw-light text-light"><span class="glyphicon glyphicon-hdd"></span> @version.FileSize</p>
             </div>
             <div class="row">
-                <p class="card-text col-md-auto fw-light text-light my-0">SHA256:</p>
-                <p class="text-bg-secondary col-md-auto px-1 fw-light text-light my-0">@version.SHA256</p>
+                <p class="card-text col-md-auto fw-light text-light my-0">MD5:</p>
+                <p class="bg-secondary bg-opacity-50 col-md-auto px-1 fw-light text-light my-0">@version.MD5</p>
             </div>
-
+            <div class="row">
+                <p class="card-text col-md-auto fw-light text-light my-0">SHA256:</p>
+                <p class="bg-secondary bg-opacity-50 col-md-auto px-1 fw-light text-light my-0">@version.SHA256</p>
+            </div>
+            <div class="row">
+                <p class="card-text btn btn-link col-md-auto my-0 py-0 border-0 opacity-75" data-bs-toggle="modal" data-bs-target="#fileTreeModal" data-bs-body="@($"{version.FileName}\n" + version.FileTree)">File Structure</p>
+            </div>
         </div>
     </div>
 }
+
+<div class="modal fade" id="fileTreeModal" tabindex="-1" aria-label="File tree" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <p class="fw-light text-light my-0 bg-secondary bg-opacity-50 p-2" style="white-space: pre-wrap" id="fileTreeModalText"></p>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="deleteVersionModal" tabindex="-1" aria-labelledby="deleteVersionModalTitle" aria-hidden="true">
     <div class="modal-dialog">
@@ -94,30 +129,55 @@
     </div>
 </div>
 
-<script>
-    // idk how else to do this
-    let id;
+@section Scripts {
+    <script>
+        // idk how else to do this
+        let id;
 
-    const deleteVersionModal = document.getElementById('deleteVersionModal');
-    deleteVersionModal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        const name = button.getAttribute('data-bs-name');
-        id = button.getAttribute('data-bs-id');
-        const modalTitle = deleteVersionModal.querySelector('.modal-body');
-        modalTitle.textContent = name + ' will be permanently deleted, are you sure you want to delete it?'
-    })
+        const deleteVersionModal = document.getElementById('deleteVersionModal');
+        deleteVersionModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const name = button.getAttribute('data-bs-name');
+            id = button.getAttribute('data-bs-id');
+            const modalTitle = deleteVersionModal.querySelector('.modal-body');
+            modalTitle.textContent = name + ' will be permanently deleted, are you sure you want to delete it?'
+        })
 
-    const deleteVersionButton = document.getElementById("deleteVersionConfirm");
-    deleteVersionButton.addEventListener('click', async _ => {
-        $.ajax({
-            url: '/mod/@mod.Id/files/' + id + '/delete',
-            type: 'POST',
-            success: function (_) {
-                window.location.href = "/mod/@mod.Id"
-            },
-            error:function(err) {
-                console.error(`Error ${err}`)
-            }
+        document.getElementById("deleteVersionConfirm").addEventListener('click', async _ => {
+            $.ajax({
+                url: '/mod/@mod.Id/files/' + id + '/delete',
+                type: 'POST',
+                success: function (_) {
+                    window.location.href = "/mod/@mod.Id/files"
+                },
+                error:function(err) {
+                    console.error(`Error ${err}`)
+                }
+            });
         });
-    });
-</script>
+
+        document.querySelectorAll('[id=approveButton]').forEach(n => {
+            const id2 = n.getAttribute('data-bs-id');
+            n.addEventListener('click', async _ => {
+                $.ajax({
+                    url: '/mod/@mod.Id/files/' + id2 + '/approve',
+                    type: 'POST',
+                    success: function (_) {
+                        window.location.href = "/mod/@mod.Id/files"
+                    },
+                    error:function(err) {
+                        console.error(`Error ${err}`)
+                    }
+                });
+            });
+        });
+
+        const fileTreeModal = document.getElementById('fileTreeModal');
+        fileTreeModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const body = button.getAttribute('data-bs-body');
+            const modalTitle = document.getElementById('fileTreeModalText');
+            modalTitle.textContent = body
+        })
+    </script>
+}

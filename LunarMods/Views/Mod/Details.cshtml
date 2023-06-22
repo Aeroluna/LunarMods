@@ -1,4 +1,5 @@
-﻿@model LunarMods.Models.AllFileVersionDetails
+﻿@using LunarMods.Utilities
+@model LunarMods.Models.AllFileVersionDetails
 
 @{
     AllFileVersionDetails allVersionDetails = ViewData.Model ?? throw new InvalidOperationException();
@@ -7,7 +8,7 @@
     Layout = "_ModLayout.cshtml";
 }
 
-<img src="/content/@mod.Name/@mod.PreviewImage" alt=""/>
+<img src="/content/@mod.Name.TrimInvalid()/@mod.PreviewImage" alt=""/>
 <div>
     @Html.Raw(Westwind.AspNetCore.Markdown.Markdown.Parse(mod.Description))
 </div>

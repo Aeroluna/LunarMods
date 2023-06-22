@@ -1,4 +1,7 @@
-﻿@model LunarMods.Models.AllFileVersionDetails
+﻿@using LunarMods.Utilities
+@using LunarMods.Services
+@model LunarMods.Models.AllFileVersionDetails
+@inject GameVersionService GameVersionService
 
 @{
     AllFileVersionDetails allVersionDetails = ViewData.Model ?? throw new InvalidOperationException();
@@ -8,16 +11,18 @@
 
 <div class="row">
     <h1 class="col-md-auto mb-3">@mod.Name</h1>
-    @{
-        switch (@mod.Visibility)
-        {
-            case 2: // unlisted
-                <span class="col-md-auto align-self-end badge bg-warning mb-4">Unlisted</span>
-                break;
-            case 3: // private
-                <span class="col-md-auto align-self-end badge bg-danger mb-4">Private</span>
-                break;
-        }
+    @if (mod.LatestVersion != null && !GameVersionService.ContainsLatestVersion(mod.LatestVersion.GameVersions))
+    {
+        <span class="col-md-auto align-self-end badge bg-warning mb-4">Outdated</span>
+    }
+    @switch (mod.Visibility)
+    {
+        case 2: // unlisted
+            <span class="col-md-auto align-self-end badge bg-warning mb-4">Unlisted</span>
+            break;
+        case 3: // private
+            <span class="col-md-auto align-self-end badge bg-danger mb-4">Private</span>
+            break;
     }
 </div>
 <h5 class="text-light">By @mod.AuthorName</h5>
@@ -25,7 +30,6 @@
 <dl class="row">
     <dt class="col-sm-9 my-3">
         @RenderBody()
-        @await RenderSectionAsync("Scripts", required: false)
     </dt>
     <dt class="col-sm-3 my-3">
         <div class="card mb-3">
@@ -88,7 +92,7 @@
         <div class="d-grid gap-2">
             @if (mod.LatestVersion != null)
             {
-                <a class="btn btn-success" href="/content/@mod.Name/@mod.LatestVersion.File" download="@mod.LatestVersion.FileDownloadName">Download</a>
+                <a class="btn btn-success" href="/content/@mod.Name.TrimInvalid()/@mod.LatestVersion.FileName" download>Download</a>
             }
             @if (mod.CanUpload)
             {
@@ -122,23 +126,24 @@
 </div>
 
 @section Scripts {
-<script>
-    const button = document.getElementById("deleteConfirm");
-    button.addEventListener('click', async _ => {
-        $.ajax({
-            url: '/mod/@mod.Id/delete',
-            type: 'POST',
-            success: function (_) {
-                window.location.href = "/mod"
-            },
-            error:function(err) {
-                console.error(`Error ${err}`)
-            }
+    <script>
+        const button = document.getElementById("deleteConfirm");
+        button.addEventListener('click', async _ => {
+            $.ajax({
+                url: '/mod/@mod.Id/delete',
+                type: 'POST',
+                success: function (_) {
+                    window.location.href = "/mod"
+                },
+                error:function(err) {
+                    console.error(`Error ${err}`)
+                }
+            });
         });
-    });
 
-    $(document).ready(function() {
-        $("body").tooltip({ selector: '[data-bs-toggle=tooltip]', container: 'body' });
-    });
-</script>
+        $(document).ready(function() {
+            $("body").tooltip({ selector: '[data-bs-toggle=tooltip]', container: 'body' });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
 }

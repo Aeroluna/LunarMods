@@ -4,42 +4,48 @@ public enum Status
 {
     Unapproved,
     Trusted,
-    Verified
+    Approved
 }
 
 public enum Alpha
 {
     Release,
-    PreRelease,
+    PreRelease
 }
 
 public class FileVersion
 {
-    public string Id { get; init; }
+    public string Id { get; init; } = string.Empty;
 
-    public string Mod { get; init; }
+    public string Mod { get; init; } = string.Empty;
 
     public int Visibility { get; set; }
 
+    public string Version { get; init; } = string.Empty;
+
     public int Alpha { get; set; }
 
-    public string Dependencies { get; set; }
+    public string Dependencies { get; set; } = string.Empty;
 
-    public string Conflicts { get; set; }
-
-    public string Version { get; set; }
+    public string Conflicts { get; set; } = string.Empty;
 
     public int Status { get; set; }
 
-    public string UploadDate { get; init; }
+    public string UploadDate { get; init; } = string.Empty;
 
-    public string File { get; init; }
+    public string FileName { get; init; } = string.Empty;
 
     public long FileSize { get; init; }
 
-    public string Changelog { get; set; }
+    public string Changelog { get; set; } = string.Empty;
 
-    public string GameVersions { get; set; }
+    public string GameVersions { get; set; } = string.Empty;
 
-    public string SHA256 { get; init; }
+    // ReSharper disable once InconsistentNaming
+    public string MD5 { get; init; } = string.Empty;
+
+    // ReSharper disable once InconsistentNaming
+    public string SHA256 { get; init; } = string.Empty;
+
+    public string Files { get; init; } = string.Empty;
 }

@@ -3,5 +3,13 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+/LunarMods/Migrations/
+/LunarMods/wwwroot/content/
+/DataProtection-keys/
 
-*.Development.json
+appsettings.Development.json
+appsettings.json
+launchSettings.json
+docker-compose.yaml
+
+*.user
